@@ -31,11 +31,22 @@ ensure_sudo() {
   fi
 }
 
+wait_for_cloud_init() {
+  log "Waiting for cloud-init to finish..."
+  if command_exists cloud-init; then
+    sudo cloud-init status --wait
+  fi
+}
+
 disable_apt_background_services() {
-  log "Stopping Ubuntu background apt services..."
+  log "Disabling Ubuntu background apt services..."
   sudo systemctl stop apt-daily.service apt-daily.timer || true
   sudo systemctl stop apt-daily-upgrade.service apt-daily-upgrade.timer || true
   sudo systemctl stop unattended-upgrades.service || true
+
+  sudo systemctl mask apt-daily.service apt-daily.timer || true
+  sudo systemctl mask apt-daily-upgrade.service apt-daily-upgrade.timer || true
+  sudo systemctl mask unattended-upgrades.service || true
 }
 
 wait_for_apt() {
@@ -49,7 +60,7 @@ wait_for_apt() {
 
     if [ "$waited" -ge "$APT_LOCK_TIMEOUT_SECONDS" ]; then
       error "Timeout waiting for apt/dpkg lock after ${APT_LOCK_TIMEOUT_SECONDS} seconds."
-      sudo ps aux | grep -E 'apt|dpkg|unattended' || true
+      sudo ps aux | grep -E 'apt|dpkg|unattended|cloud-init' || true
       exit 1
     fi
 
@@ -177,6 +188,7 @@ show_status() {
 
 main() {
   ensure_sudo
+  wait_for_cloud_init
   disable_apt_background_services
   install_base_packages
   install_docker
