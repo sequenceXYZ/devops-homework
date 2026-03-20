@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+set -x
 
 MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-2200}"
 MINIKUBE_CPUS="${MINIKUBE_CPUS:-2}"
