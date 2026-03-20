@@ -91,8 +91,15 @@ install_docker() {
   sudo systemctl enable docker
   sudo systemctl start docker
 
+  if groups "$USER" | grep -q '\bdocker\b'; then
+    log "User '$USER' is already in the docker group."
+  else
+    log "Adding user '$USER' to the docker group..."
+    sudo usermod -aG docker "$USER"
+  fi
+
   log "Validating Docker daemon access..."
-  sudo docker ps >/dev/null 2>&1 || {
+  sg docker -c "docker ps" >/dev/null 2>&1 || {
     error "Docker daemon is not accessible."
     exit 1
   }
@@ -140,7 +147,7 @@ start_minikube() {
   fi
 
   log "Starting Minikube with Docker driver..."
-  sudo -E minikube start --driver=docker --memory="${MINIKUBE_MEMORY}" --cpus="${MINIKUBE_CPUS}"
+  sg docker -c "minikube start --driver=docker --memory=${MINIKUBE_MEMORY} --cpus=${MINIKUBE_CPUS}"
 }
 
 wait_for_cluster() {
