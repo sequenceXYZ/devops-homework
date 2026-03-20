@@ -71,7 +71,6 @@ ensure_docker_access() {
   warn "Attempting to re-run the script in a Docker-group shell..."
 
   if sg docker -c "docker ps >/dev/null 2>&1"; then
-    export SETUP_MINIKUBE_REEXEC=1
     exec sg docker "$0"
   fi
 
@@ -138,6 +137,22 @@ enable_addons() {
   minikube addons enable metrics-server
 }
 
+wait_for_addons() {
+  log "Waiting for ingress controller to be ready..."
+  kubectl wait \
+    --namespace ingress-nginx \
+    --for=condition=ready pod \
+    -l app.kubernetes.io/component=controller \
+    --timeout=180s
+
+  log "Waiting for metrics-server to be ready..."
+  kubectl wait \
+    --namespace kube-system \
+    --for=condition=ready pod \
+    -l k8s-app=metrics-server \
+    --timeout=180s
+}
+
 show_status() {
   log "Minikube status:"
   minikube status || true
@@ -162,6 +177,7 @@ main() {
   start_minikube
   wait_for_cluster
   enable_addons
+  wait_for_addons
   show_status
 
   log "Setup completed successfully."
