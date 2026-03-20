@@ -27,7 +27,7 @@ command_exists() {
 require_tools() {
   local missing=0
 
-  for cmd in docker kubectl minikube curl; do
+  for cmd in docker kubectl minikube curl sg; do
     if ! command_exists "$cmd"; then
       error "Required command not found: $cmd"
       missing=1
@@ -37,6 +37,15 @@ require_tools() {
   if [[ "$missing" -ne 0 ]]; then
     exit 1
   fi
+}
+
+ensure_docker_access() {
+  if docker ps >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "Current shell does not have Docker access. Re-running deploy.sh in docker group shell..."
+  exec sg docker -c "$0"
 }
 
 check_minikube() {
@@ -139,6 +148,7 @@ test_app() {
 
 main() {
   require_tools
+  ensure_docker_access
   check_minikube
   build_image
   load_image
