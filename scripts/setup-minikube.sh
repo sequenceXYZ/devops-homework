@@ -31,6 +31,13 @@ ensure_sudo() {
   fi
 }
 
+disable_apt_background_services() {
+  log "Stopping Ubuntu background apt services..."
+  sudo systemctl stop apt-daily.service apt-daily.timer || true
+  sudo systemctl stop apt-daily-upgrade.service apt-daily-upgrade.timer || true
+  sudo systemctl stop unattended-upgrades.service || true
+}
+
 wait_for_apt() {
   log "Waiting for apt/dpkg lock to be released..."
 
@@ -42,12 +49,13 @@ wait_for_apt() {
 
     if [ "$waited" -ge "$APT_LOCK_TIMEOUT_SECONDS" ]; then
       error "Timeout waiting for apt/dpkg lock after ${APT_LOCK_TIMEOUT_SECONDS} seconds."
-      error "Another package management process is still running."
+      sudo ps aux | grep -E 'apt|dpkg|unattended' || true
       exit 1
     fi
 
     sleep 5
     waited=$((waited + 5))
+    log "apt lock still held, waited ${waited}s..."
   done
 
   log "apt/dpkg lock is free."
@@ -169,6 +177,7 @@ show_status() {
 
 main() {
   ensure_sudo
+  disable_apt_background_services
   install_base_packages
   install_docker
   install_kubectl
