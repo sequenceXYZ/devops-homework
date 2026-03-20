@@ -30,19 +30,21 @@ The deployed application is a simple web service that returns the current server
 devops-homework/
 ├── app/
 │   ├── app.py
-│   ├── requirements.txt
-├── Dockerfile
+│   └── requirements.txt
 ├── k8s/
 │   ├── deployment.yaml
 │   ├── service.yaml
 │   ├── ingress.yaml
-│   ├── hpa.yaml
+│   └── hpa.yaml
 ├── scripts/
 │   ├── setup-minikube.sh
 │   └── deploy.sh
-├── .github/workflows/
-│   ├── ci.yml
-│   └── cd.yml
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml
+├── Dockerfile
+├── .dockerignore
+├── .gitignore
 ├── README.md
 └── REPORT.md
 ```
