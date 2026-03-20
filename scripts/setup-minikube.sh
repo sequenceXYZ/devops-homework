@@ -5,6 +5,7 @@ set -euo pipefail
 MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-2200}"
 MINIKUBE_CPUS="${MINIKUBE_CPUS:-2}"
 KUBECTL_VERSION="${KUBECTL_VERSION:-v1.31.0}"
+export DEBIAN_FRONTEND=noninteractive
 
 log() {
   echo
@@ -32,51 +33,40 @@ ensure_sudo() {
   fi
 }
 
+wait_for_apt() {
+  log "Waiting for apt/dpkg lock to be released..."
+  while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+     || sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+     || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
+     || sudo fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+    sleep 5
+  done
+}
+
 install_base_packages() {
+  wait_for_apt
   log "Installing required base packages..."
   sudo apt-get update
-  sudo apt-get install -y curl ca-certificates apt-transport-https gnupg
+  sudo apt-get install -y curl ca-certificates apt-transport-https gnupg docker.io
 }
 
 install_docker() {
   if command_exists docker; then
     log "Docker is already installed."
   else
-    log "Installing Docker..."
-    sudo apt-get update
-    sudo apt-get install -y docker.io
+    error "Docker command not found after package installation."
+    exit 1
   fi
 
   log "Ensuring Docker service is enabled and running..."
   sudo systemctl enable docker
   sudo systemctl start docker
 
-  if groups "$USER" | grep -q '\bdocker\b'; then
-    log "User '$USER' is already in the docker group."
-  else
-    log "Adding user '$USER' to the docker group..."
-    sudo usermod -aG docker "$USER"
-  fi
-}
-
-ensure_docker_access() {
-  log "Checking Docker access..."
-
-  if docker ps >/dev/null 2>&1; then
-    log "Docker is accessible for user '$USER'."
-    return 0
-  fi
-
-  warn "Current shell does not yet have Docker group access."
-  warn "Attempting to re-run the script in a Docker-group shell..."
-
-  if sg docker -c "docker ps >/dev/null 2>&1"; then
-    exec sg docker "$0"
-  fi
-
-  error "Docker is installed, but current user still cannot access Docker daemon."
-  error "Please start a new login session and rerun the script."
-  exit 1
+  log "Validating Docker daemon access..."
+  sudo docker ps >/dev/null 2>&1 || {
+    error "Docker daemon is not accessible."
+    exit 1
+  }
 }
 
 install_kubectl() {
@@ -121,7 +111,7 @@ start_minikube() {
   fi
 
   log "Starting Minikube with Docker driver..."
-  minikube start --driver=docker --memory="${MINIKUBE_MEMORY}" --cpus="${MINIKUBE_CPUS}"
+  sudo -E minikube start --driver=docker --memory="${MINIKUBE_MEMORY}" --cpus="${MINIKUBE_CPUS}"
 }
 
 wait_for_cluster() {
@@ -171,7 +161,6 @@ main() {
   ensure_sudo
   install_base_packages
   install_docker
-  ensure_docker_access
   install_kubectl
   install_minikube
   start_minikube
