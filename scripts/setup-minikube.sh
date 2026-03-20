@@ -2,13 +2,6 @@
 
 set -euo pipefail
 
-# ==========================================
-# Minikube setup script for Ubuntu
-# Installs Docker, kubectl, Minikube
-# Starts Minikube with Docker driver
-# Enables ingress and metrics-server addons
-# ==========================================
-
 MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-2200}"
 MINIKUBE_CPUS="${MINIKUBE_CPUS:-2}"
 KUBECTL_VERSION="${KUBECTL_VERSION:-v1.31.0}"
@@ -32,11 +25,17 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
-require_sudo() {
+ensure_sudo() {
   if ! command_exists sudo; then
     error "sudo is required but not installed."
     exit 1
   fi
+}
+
+install_base_packages() {
+  log "Installing required base packages..."
+  sudo apt-get update
+  sudo apt-get install -y curl ca-certificates apt-transport-https gnupg
 }
 
 install_docker() {
@@ -57,13 +56,33 @@ install_docker() {
   else
     log "Adding user '$USER' to the docker group..."
     sudo usermod -aG docker "$USER"
-    warn "Docker group membership was updated. Please log out and log back in, then rerun this script if Docker commands fail."
   fi
+}
+
+ensure_docker_access() {
+  log "Checking Docker access..."
+
+  if docker ps >/dev/null 2>&1; then
+    log "Docker is accessible for user '$USER'."
+    return 0
+  fi
+
+  warn "Current shell does not yet have Docker group access."
+  warn "Attempting to re-run the script in a Docker-group shell..."
+
+  if sg docker -c "docker ps >/dev/null 2>&1"; then
+    export SETUP_MINIKUBE_REEXEC=1
+    exec sg docker "$0"
+  fi
+
+  error "Docker is installed, but current user still cannot access Docker daemon."
+  error "Please start a new login session and rerun the script."
+  exit 1
 }
 
 install_kubectl() {
   if command_exists kubectl; then
-    log "kubectl is already installed: $(kubectl version --client --output=yaml | grep gitVersion | head -n1 | awk '{print $2}')"
+    log "kubectl is already installed."
     return
   fi
 
@@ -76,7 +95,7 @@ install_kubectl() {
 
 install_minikube() {
   if command_exists minikube; then
-    log "Minikube is already installed: $(minikube version --short || true)"
+    log "Minikube is already installed."
     return
   fi
 
@@ -86,24 +105,12 @@ install_minikube() {
   rm -f minikube-linux-amd64
 }
 
-verify_docker_access() {
-  log "Checking Docker access..."
-  if docker ps >/dev/null 2>&1; then
-    log "Docker is accessible for user '$USER'."
-  else
-    error "Docker is installed, but current user cannot access Docker daemon."
-    error "Run: newgrp docker"
-    error "Or log out and log back in, then rerun the script."
-    exit 1
-  fi
-}
-
 start_minikube() {
-  if minikube status >/dev/null 2>&1; then
-    local host_status
-    local kubelet_status
-    local apiserver_status
+  local host_status=""
+  local kubelet_status=""
+  local apiserver_status=""
 
+  if minikube status >/dev/null 2>&1; then
     host_status="$(minikube status --format='{{.Host}}' 2>/dev/null || true)"
     kubelet_status="$(minikube status --format='{{.Kubelet}}' 2>/dev/null || true)"
     apiserver_status="$(minikube status --format='{{.APIServer}}' 2>/dev/null || true)"
@@ -118,17 +125,17 @@ start_minikube() {
   minikube start --driver=docker --memory="${MINIKUBE_MEMORY}" --cpus="${MINIKUBE_CPUS}"
 }
 
+wait_for_cluster() {
+  log "Waiting for Kubernetes node to become Ready..."
+  kubectl wait --for=condition=Ready node/minikube --timeout=180s
+}
+
 enable_addons() {
   log "Enabling ingress addon..."
   minikube addons enable ingress
 
   log "Enabling metrics-server addon..."
   minikube addons enable metrics-server
-}
-
-wait_for_cluster() {
-  log "Waiting for Kubernetes node to become Ready..."
-  kubectl wait --for=condition=Ready node/minikube --timeout=180s
 }
 
 show_status() {
@@ -146,11 +153,10 @@ show_status() {
 }
 
 main() {
-  require_sudo
-
-  log "Starting Minikube environment setup..."
+  ensure_sudo
+  install_base_packages
   install_docker
-  verify_docker_access
+  ensure_docker_access
   install_kubectl
   install_minikube
   start_minikube
@@ -161,9 +167,8 @@ main() {
   log "Setup completed successfully."
   echo
   echo "Next steps:"
-  echo "1. Build Docker image"
-  echo "2. Load image into Minikube"
-  echo "3. Apply Kubernetes manifests"
+  echo "1. Run ./scripts/deploy.sh"
+  echo "2. Verify the application with Ingress"
 }
 
 main "$@"
