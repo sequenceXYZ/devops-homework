@@ -6,16 +6,13 @@ set -x
 MINIKUBE_MEMORY="${MINIKUBE_MEMORY:-2200}"
 MINIKUBE_CPUS="${MINIKUBE_CPUS:-2}"
 KUBECTL_VERSION="${KUBECTL_VERSION:-v1.31.0}"
+APT_LOCK_TIMEOUT_SECONDS="${APT_LOCK_TIMEOUT_SECONDS:-300}"
+
 export DEBIAN_FRONTEND=noninteractive
 
 log() {
   echo
   echo "[INFO] $1"
-}
-
-warn() {
-  echo
-  echo "[WARN] $1"
 }
 
 error() {
@@ -36,12 +33,24 @@ ensure_sudo() {
 
 wait_for_apt() {
   log "Waiting for apt/dpkg lock to be released..."
+
+  local waited=0
   while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
      || sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
      || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
      || sudo fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+
+    if [ "$waited" -ge "$APT_LOCK_TIMEOUT_SECONDS" ]; then
+      error "Timeout waiting for apt/dpkg lock after ${APT_LOCK_TIMEOUT_SECONDS} seconds."
+      error "Another package management process is still running."
+      exit 1
+    fi
+
     sleep 5
+    waited=$((waited + 5))
   done
+
+  log "apt/dpkg lock is free."
 }
 
 install_base_packages() {
