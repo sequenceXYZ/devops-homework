@@ -135,10 +135,10 @@ start_minikube() {
   local kubelet_status=""
   local apiserver_status=""
 
-  if minikube status >/dev/null 2>&1; then
-    host_status="$(minikube status --format='{{.Host}}' 2>/dev/null || true)"
-    kubelet_status="$(minikube status --format='{{.Kubelet}}' 2>/dev/null || true)"
-    apiserver_status="$(minikube status --format='{{.APIServer}}' 2>/dev/null || true)"
+  if sg docker -c "minikube status" >/dev/null 2>&1; then
+    host_status="$(sg docker -c "minikube status --format='{{.Host}}'" 2>/dev/null || true)"
+    kubelet_status="$(sg docker -c "minikube status --format='{{.Kubelet}}'" 2>/dev/null || true)"
+    apiserver_status="$(sg docker -c "minikube status --format='{{.APIServer}}'" 2>/dev/null || true)"
 
     if [[ "$host_status" == "Running" && "$kubelet_status" == "Running" && "$apiserver_status" == "Running" ]]; then
       log "Minikube is already running."
@@ -157,10 +157,10 @@ wait_for_cluster() {
 
 enable_addons() {
   log "Enabling ingress addon..."
-  minikube addons enable ingress
+  sg docker -c "minikube addons enable ingress"
 
   log "Enabling metrics-server addon..."
-  minikube addons enable metrics-server
+  sg docker -c "minikube addons enable metrics-server"
 }
 
 wait_for_addons() {
@@ -181,7 +181,7 @@ wait_for_addons() {
 
 show_status() {
   log "Minikube status:"
-  minikube status || true
+  sg docker -c "minikube status" || true
 
   log "Kubernetes nodes:"
   kubectl get nodes || true
