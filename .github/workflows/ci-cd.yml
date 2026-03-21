@@ -1,36 +1,51 @@
 name: CI-CD Pipeline
 
+# Trigger conditions:
+# - Automatically runs on push to main branch
+# - Can also be triggered manually via GitHub UI
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
+# Permissions required by the workflow:
+# - contents: read → allows checkout of repository
+# - packages: write → allows pushing images to container registries
 permissions:
   contents: read
   packages: write
 
 jobs:
   deploy-and-push:
+    # Use a self-hosted runner (required for Minikube + Docker access)
     runs-on: self-hosted
 
     steps:
+      # Step 1: Clone the repository to the runner
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step 2: Ensure shell scripts have execution permissions
       - name: Make scripts executable
         run: |
           chmod +x scripts/setup-minikube.sh
           chmod +x scripts/deploy.sh
 
+      # Step 3: Prepare local Kubernetes environment (Minikube setup)
+      # Installs Docker, kubectl, Minikube and starts cluster if needed
       - name: Prepare local Kubernetes environment
         run: |
           ./scripts/setup-minikube.sh
 
+      # Step 4: Deploy the application to Kubernetes
+      # Builds Docker image, loads it into Minikube and applies manifests
       - name: Deploy application to local Kubernetes cluster
         run: |
           ./scripts/deploy.sh
 
+      # Step 5: Verify that deployment was successful
+      # Checks cluster state and performs HTTP request via Ingress
       - name: Verify deployment
         run: |
           kubectl get nodes
@@ -39,15 +54,22 @@ jobs:
           kubectl get ingress
           curl -H "Host: datetime.local" "http://$(sg docker -c 'minikube ip')"
 
+      # Step 6: Authenticate to Docker Hub using secrets
+      # Uses secure token-based login (no plain password)
       - name: Log in to Docker Hub
         run: |
           sg docker -c "echo '${{ secrets.DOCKERHUB_TOKEN }}' | docker login -u '${{ secrets.DOCKERHUB_USERNAME }}' --password-stdin"
 
+      # Step 7: Tag Docker image for remote registry
+      # - latest → always points to newest build
+      # - commit SHA → unique immutable version
       - name: Tag image for Docker Hub
         run: |
           sg docker -c "docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest"
           sg docker -c "docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:${{ github.sha }}"
 
+      # Step 8: Push images to Docker Hub
+      # Publishes both latest and versioned images
       - name: Push image to Docker Hub
         run: |
           sg docker -c "docker push ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest"
