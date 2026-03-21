@@ -57,7 +57,7 @@ check_minikube() {
 
 build_image() {
   log "Building Docker image: ${FULL_IMAGE}"
-  docker build -t "${FULL_IMAGE}" .
+  sg docker -c "docker build -t ${FULL_IMAGE} ."
 }
 
 load_image() {
