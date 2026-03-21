@@ -110,7 +110,7 @@ Pipeline steps:
 
 Docker image is pushed automatically to:
 
-https://hub.docker.com/r/<your-username>/datetime-app
+https://hub.docker.com/repositories/<your-username>/datetime-app
 
 Tags:
 - latest  
