@@ -149,8 +149,3 @@ curl -H "Host: datetime.local" http://$(minikube ip)
 - End-to-end validation  
 
 ---
-
-## 👩‍💻 Author
-
-Agnija Vjakse  
-DevOps Engineer
