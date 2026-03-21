@@ -40,3 +40,117 @@ Workflow:
 ---
 
 ## 📂 Project Structure
+
+devops-homework/
+
+scripts/
+- setup-minikube.sh
+- deploy.sh
+
+k8s/
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+- hpa.yaml
+
+.github/workflows/
+- ci-cd.yml
+
+Dockerfile  
+README.md
+
+---
+
+## 🚀 How to Run (Manual)
+
+### 1. Clone repository
+
+git clone https://github.com/sequenceXYZ/devops-homework.git  
+cd devops-homework  
+
+---
+
+### 2. Setup environment
+
+chmod +x scripts/setup-minikube.sh  
+./scripts/setup-minikube.sh  
+
+---
+
+### 3. Deploy application
+
+chmod +x scripts/deploy.sh  
+./scripts/deploy.sh  
+
+---
+
+### 4. Test application
+
+curl -H "Host: datetime.local" http://$(minikube ip)
+
+---
+
+## 🔄 CI/CD Pipeline
+
+Pipeline is defined in:
+
+.github/workflows/ci-cd.yml
+
+Pipeline steps:
+1. Checkout repository  
+2. Prepare environment (Docker + Minikube)  
+3. Build Docker image  
+4. Deploy to Kubernetes  
+5. Verify deployment  
+6. Push image to Docker Hub  
+
+---
+
+## 🐳 Docker Hub
+
+Docker image is pushed automatically to:
+
+https://hub.docker.com/r/<your-username>/datetime-app
+
+Tags:
+- latest  
+- commit SHA  
+
+---
+
+## 🌐 Access Application
+
+Application is available via Ingress:
+
+curl -H "Host: datetime.local" http://$(minikube ip)
+
+---
+
+## ⚠️ Important Notes
+
+- The pipeline uses a self-hosted runner  
+- Docker access is handled via docker group (sg docker)  
+- Minikube runs with Docker driver  
+- Setup script handles:
+  - cloud-init wait  
+  - apt lock issues  
+  - background services  
+
+---
+
+## ✅ Features Implemented
+
+- Full environment bootstrap from scratch  
+- Automated Kubernetes deployment  
+- Ingress-based routing  
+- Horizontal Pod Autoscaler (HPA)  
+- CI/CD pipeline with GitHub Actions  
+- Docker image publishing  
+- End-to-end validation  
+
+---
+
+## 👩‍💻 Author
+
+Agnija Vjakse  
+DevOps Engineer
