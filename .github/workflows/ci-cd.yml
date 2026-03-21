@@ -37,18 +37,18 @@ jobs:
           kubectl get pods
           kubectl get svc
           kubectl get ingress
-          curl -H "Host: datetime.local" http://$(minikube ip)
+          curl -H "Host: datetime.local" "http://$(sg docker -c 'minikube ip')"
 
       - name: Log in to Docker Hub
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          sg docker -c "echo '${{ secrets.DOCKERHUB_TOKEN }}' | docker login -u '${{ secrets.DOCKERHUB_USERNAME }}' --password-stdin"
 
       - name: Tag image for Docker Hub
         run: |
-          docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest
-          docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:${{ github.sha }}
+          sg docker -c "docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest"
+          sg docker -c "docker tag datetime-app:v1 ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:${{ github.sha }}"
 
       - name: Push image to Docker Hub
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:${{ github.sha }}
+          sg docker -c "docker push ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:latest"
+          sg docker -c "docker push ${{ secrets.DOCKERHUB_USERNAME }}/datetime-app:${{ github.sha }}"
