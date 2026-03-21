@@ -46,13 +46,16 @@ devops-homework/
 scripts/
 - setup-minikube.sh
 - deploy.sh
+  
 k8s/
 - deployment.yaml
 - service.yaml
 - ingress.yaml
 - hpa.yaml
+  
 .github/workflows/
 - ci-cd.yml
+  
 Dockerfile  
 README.md
 
