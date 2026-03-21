@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+set -x
 
 APP_NAME="${APP_NAME:-datetime-app}"
 IMAGE_NAME="${IMAGE_NAME:-datetime-app}"
@@ -39,20 +40,11 @@ require_tools() {
   fi
 }
 
-ensure_docker_access() {
-  if docker ps >/dev/null 2>&1; then
-    return 0
-  fi
-
-  log "Current shell does not have Docker access. Re-running deploy.sh in docker group shell..."
-  exec sg docker -c "$0"
-}
-
 check_minikube() {
   log "Checking Minikube status..."
 
-  if ! minikube status >/dev/null 2>&1; then
-    error "Minikube is not running."
+  if ! sg docker -c "minikube status" >/dev/null 2>&1; then
+    error "Minikube is not running or is not accessible."
     error "Run ./scripts/setup-minikube.sh first."
     exit 1
   fi
@@ -70,7 +62,7 @@ build_image() {
 
 load_image() {
   log "Loading image into Minikube: ${FULL_IMAGE}"
-  minikube image load "${FULL_IMAGE}"
+  sg docker -c "minikube image load ${FULL_IMAGE}"
 }
 
 deploy_manifests() {
@@ -125,13 +117,16 @@ show_status() {
     log "HPA:"
     kubectl get hpa
   fi
+
+  log "Minikube status:"
+  sg docker -c "minikube status" || true
 }
 
 test_app() {
   local mkip
   local response
 
-  mkip="$(minikube ip)"
+  mkip="$(sg docker -c "minikube ip")"
 
   log "Testing application through Ingress..."
   echo "Request:"
@@ -148,7 +143,6 @@ test_app() {
 
 main() {
   require_tools
-  ensure_docker_access
   check_minikube
   build_image
   load_image
