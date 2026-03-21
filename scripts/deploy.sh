@@ -3,11 +3,14 @@
 set -euo pipefail
 set -x
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 APP_NAME="${APP_NAME:-datetime-app}"
 IMAGE_NAME="${IMAGE_NAME:-datetime-app}"
 IMAGE_TAG="${IMAGE_TAG:-v1}"
 FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
-K8S_DIR="${K8S_DIR:-k8s}"
+K8S_DIR="${K8S_DIR:-${PROJECT_ROOT}/k8s}"
 INGRESS_HOST="${INGRESS_HOST:-datetime.local}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-180s}"
 
@@ -57,6 +60,7 @@ check_minikube() {
 
 build_image() {
   log "Building Docker image: ${FULL_IMAGE}"
+  cd "${PROJECT_ROOT}"
   sg docker -c "docker build -t ${FULL_IMAGE} ."
 }
 
@@ -66,7 +70,7 @@ load_image() {
 }
 
 deploy_manifests() {
-  log "Applying Kubernetes manifests from ${K8S_DIR}/"
+  log "Applying Kubernetes manifests from ${K8S_DIR}"
   kubectl apply -f "${K8S_DIR}/deployment.yaml"
   kubectl apply -f "${K8S_DIR}/service.yaml"
   kubectl apply -f "${K8S_DIR}/ingress.yaml"
