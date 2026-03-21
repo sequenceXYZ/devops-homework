@@ -57,7 +57,7 @@ k8s/
 - ci-cd.yml
   
 Dockerfile  
-README.md    
+README.md  
 REPORT.md
 
 ---
@@ -127,6 +127,89 @@ curl -H "Host: datetime.local" http://$(minikube ip)
 
 ---
 
+## 📈 Scalability
+
+Horizontal Pod Autoscaler (HPA) is configured.
+
+### Manual scaling
+
+kubectl scale deployment datetime-app --replicas=3
+
+### Benefits
+
+- Improved performance  
+- High availability  
+- Efficient resource usage  
+
+---
+
+## 🔐 Security
+
+- Containers run as non-root user  
+- Privilege escalation is disabled  
+- Secrets are stored in GitHub Secrets  
+- Limited container permissions  
+- Controlled CI/CD execution  
+
+---
+
+## 🛠 Troubleshooting
+
+### Docker permission denied
+
+newgrp docker  
+
+---
+
+### Minikube reset
+
+minikube delete  
+minikube start --driver=docker  
+
+---
+
+### Check user
+
+whoami  
+
+---
+
+### Pods debugging
+
+kubectl get pods  
+kubectl describe pod <pod-name>  
+kubectl logs <pod-name>  
+
+---
+
+### Deployment issues
+
+kubectl rollout status deployment datetime-app  
+kubectl rollout restart deployment datetime-app  
+
+---
+
+### Service issues
+
+kubectl get svc  
+kubectl get endpoints  
+
+---
+
+### Ingress issues
+
+minikube addons enable ingress  
+kubectl get ingress  
+
+---
+
+### Full reset
+
+minikube delete  
+docker system prune -af  
+
+---
+
 ## ⚠️ Important Notes
 
 - The pipeline uses a self-hosted runner  
@@ -148,5 +231,3 @@ curl -H "Host: datetime.local" http://$(minikube ip)
 - CI/CD pipeline with GitHub Actions  
 - Docker image publishing  
 - End-to-end validation  
-
----
